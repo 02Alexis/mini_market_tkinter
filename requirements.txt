@@ -1,0 +1,9 @@
+antiorm==1.2.1
+babel==2.17.0
+chardet==5.2.0
+db==0.1.1
+db-sqlite3==0.0.1
+pillow==11.1.0
+reportlab==4.3.0
+tkcalendar==1.6.1
+ttkthemes==3.2.2
