@@ -9,7 +9,7 @@ import sys
 import os
 
 class Manager(Tk):
-    def __init_(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.title("Mini Market")
         self.geometry("1100x650+120+120")
@@ -17,20 +17,20 @@ class Manager(Tk):
 
         container = Frame(self)
         container.pack(side=TOP, fill=BOTH, expand=True)
-        container.configure(bg="008f39")
+        container.configure(bg="#95c799")
 
-        self.frame = {}
+        self.frames = {}
         for i in (Login, Registro, Container):
             frame = i(container, self)
             self.frames[i] = frame
             
-        self.show_frame(Login)
+        self.show_frame(Container)
 
         self.style = ttk.Style()
         self.style.theme_use("clam")
 
     def show_frame(self, container):
-        frame = self.frame (container)
+        frame = self.frames[container]
         frame.tkraise()
 
 def main():
