@@ -7,4 +7,5 @@ class Inventario(tk.Frame):
         self.widgets()
 
     def widgets(self):
-        pass
+        label = Label(self, text="inventario")
+        label.pack()
