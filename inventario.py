@@ -3,6 +3,7 @@ from tkinter import *
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 from PIL import Image, ImageTk
+import threading
 import sys
 import os
 
@@ -12,6 +13,7 @@ class Inventario(tk.Frame):
         self.widgets()
         self.articles_combobox()
         self.load_articles()
+        self.timer_articulos = None
 
         self.image_folder = "images/folder"
         if not os.path.exists(self.image_folder):
@@ -47,6 +49,8 @@ class Inventario(tk.Frame):
 
         self.comboboxbuscar = ttk.Combobox(lblframe_buscar, font="arial 12")
         self.comboboxbuscar.place(x=5, y=5, width=260, height=40)
+        self.comboboxbuscar.bind("<<ComboboxSelected>>", self.on_combobox_select)
+        self.comboboxbuscar.bind("<KeyRelease>", self.filter_articles)
     # =============================================================
     # ----- seleccion
         lblframe_selection = LabelFrame(self, text="Selección", font="arial 14 bold", bg="#95c799")
@@ -160,6 +164,8 @@ class Inventario(tk.Frame):
                 self.con.commit()
                 messagebox.showinfo("Exito", "Articulo agregado correctamente")
                 top.destroy()
+                self.load_articles()
+                self.articles_combobox()
             except sqlite3.Error as e:
                 print("Error al cargar el articulo:", e)
                 messagebox.showerror("Error", "Error al agregar el articulo")
@@ -178,8 +184,8 @@ class Inventario(tk.Frame):
         params = []
 
         if filtro:
-            query += "WHERE article LIKE ?"
-            params.append(f'%{filtro}')
+            query += " WHERE article LIKE ?"
+            params.append(f'%{filtro}%')
 
         self.cur.execute(query, params)
         articulos = self.cur.fetchall()
@@ -189,7 +195,6 @@ class Inventario(tk.Frame):
 
         for article, price, image_path in articulos:
             self.show_article(article, price, image_path)
-
 
     def show_article(self, article, price, image_path):
         article_frame = tk.Frame(self.scrollable_frame, bg="white", relief="solid")
@@ -213,3 +218,63 @@ class Inventario(tk.Frame):
         if self.colum > 3:
             self.colum = 0
             self.row += 1
+
+    def on_combobox_select(self, event):
+        self.update_label()
+
+    def update_label(self, event=None):
+        articulo_seleccionado = self.comboboxbuscar.get()
+
+        try:
+            self.cur.execute("SELECT article, price, cost, stock, status FROM articulos WHERE article=?", (articulo_seleccionado,))
+            resultado = self.cur.fetchone()
+
+            if resultado is not None:
+                article, price, cost, stock, status = resultado
+
+                self.label1.config(text=f"Articulo: {article}")
+                self.label2.config(text=f"Precio: {price}")
+                self.label3.config(text=f"Costo: {cost}")
+                self.label4.config(text=f"Stock: {stock}")
+
+                self.label5.config(text=f"Estado: {status}")
+                if status.lower() == "Activo":
+                    self.label5.config(fg="green")
+                elif status.lower() == "Inactivo":
+                    self.label5.config(fg="red")
+                else:
+                    self.label5.config(fg="black")
+            
+            else:
+                self.label1.config(text="Articulo: No encontrado")
+                self.label2.config(text="Precio: N/A")
+                self.label3.config(text="Costo: N/A")
+                self.label4.config(text="Stock: N/A")
+                self.label5.config(text="Estado: N/A", fg="black")
+
+        except sqlite3.Error as e:
+            print("Error al obtener los datos del articulo:", e)
+            messagebox.showerror("Error", "Error al obtener los datos del articulo")
+
+    def filter_articles(self, event):
+        if self.timer_articulos:
+            self.timer_articulos.cancel()
+        self.timer_articulos = threading.Timer(0.5, self._filter_articulos)
+        self.timer_articulos.start()
+
+    def _filter_articulos(self):
+        typed = self.comboboxbuscar.get()
+
+        if typed == '':
+            data = self.articulos
+        else:
+            data = [item for item in self.articulos if typed.lower() in item.lower()]
+
+        if data:
+            self.comboboxbuscar['values'] = data
+            self.comboboxbuscar.event_generate('<Down>')
+        else:
+            self.comboboxbuscar['values'] = ['No se encontraron resultados']
+            self.comboboxbuscar.event_generate('<Down>')
+
+        self.load_articles(filtro=typed)
