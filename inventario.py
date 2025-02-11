@@ -11,6 +11,7 @@ class Inventario(tk.Frame):
         super().__init__(padre)
         self.widgets()
         self.articles_combobox()
+        self.load_articles()
 
         self.image_folder = "images/folder"
         if not os.path.exists(self.image_folder):
@@ -165,3 +166,50 @@ class Inventario(tk.Frame):
 
         tk.Button(top, text="Guardar", font="arial, 12 bold", command=save_article).place(x=50, y=260, width=150, height=40)
         tk.Button(top, text="Cancelar", font="arial, 12 bold", command=top.destroy).place(x=260, y=260, width=150, height=40)
+
+    def load_articles(self, filtro=None, categoria=None):
+        self.after(0, self._load_articles, filtro, categoria)
+
+    def _load_articles(self, filtro=None, categoria=None):
+        for widget in self.scrollable_frame.winfo_children():
+            widget.destroy()
+
+        query = "SELECT article, price, image_path FROM articulos"
+        params = []
+
+        if filtro:
+            query += "WHERE article LIKE ?"
+            params.append(f'%{filtro}')
+
+        self.cur.execute(query, params)
+        articulos = self.cur.fetchall()
+
+        self.row = 0
+        self.colum = 0
+
+        for article, price, image_path in articulos:
+            self.show_article(article, price, image_path)
+
+
+    def show_article(self, article, price, image_path):
+        article_frame = tk.Frame(self.scrollable_frame, bg="white", relief="solid")
+        article_frame.grid(row=self.row, column=self.colum, padx=10, pady=10)
+
+        if image_path and os.path.exists(image_path):
+            image = Image.open(image_path)
+            image = image.resize((150, 150), Image.LANCZOS)
+            imagen = ImageTk.PhotoImage(image)
+            image_label = tk.Label(article_frame, image=imagen)
+            image_label.image = imagen
+            image_label.pack(expand=True, fill="both")
+
+        name_label = tk.Label(article_frame, text=article, bg="white", anchor="w", wraplength=150, font="arial 10 bold")
+        name_label.pack(side="top", fill="x")
+
+        precio_label = tk.Label(article_frame, text=f"Precio: ${price:.3f}", bg="white", anchor="w", wraplength=150, font="arial 8 bold")
+        precio_label.pack(side="bottom", fill="x")
+
+        self.colum += 1
+        if self.colum > 3:
+            self.colum = 0
+            self.row += 1
