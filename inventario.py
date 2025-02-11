@@ -238,9 +238,9 @@ class Inventario(tk.Frame):
                 self.label4.config(text=f"Stock: {stock}")
 
                 self.label5.config(text=f"Estado: {status}")
-                if status.lower() == "Activo":
+                if status.lower() == "activo":
                     self.label5.config(fg="green")
-                elif status.lower() == "Inactivo":
+                elif status.lower() == "inactivo":
                     self.label5.config(fg="red")
                 else:
                     self.label5.config(fg="black")
