@@ -138,7 +138,7 @@ class Ventas(tk.Frame):
         payment_window = tk.Toplevel(self)
         payment_window.title("Realizar pago")
         payment_window.geometry("400x400+450+80")
-        payment_window.config(bg="#95c799")
+        payment_window.configure(bg="#95c799")
         payment_window.resizable(False, False)
         payment_window.transient(self.master)
         payment_window.grab_set()
@@ -279,6 +279,114 @@ class Ventas(tk.Frame):
             except sqlite3.Error as e:
                 print("Error al editar el articulo: ", e) 
 
+    def see_sales_made(self):
+        try:
+            conn = sqlite3.connect(self.db_name)
+            c = conn.cursor()
+            c.execute("SELECT * FROM ventas")
+            ventas = c.fetchall()
+            conn.close()
+            print("#1 Datos recuperados de la base de datos:", ventas)
+
+            window_sales = tk.Toplevel(self)
+            print("Ventana 'window_sales' creada correctamente.") 
+            window_sales.title("Ventas realizadas")
+            window_sales.geometry("1100x650+120+20")
+            window_sales.configure(bg="#95c799")
+            window_sales.resizable(False, False)
+            window_sales.transient(self.master)
+            window_sales.grab_set()
+            window_sales.focus_set()
+            window_sales.lift()
+
+            def filter_sales():
+                invoice_search = entry_invoice.get()
+                client_search = entry_client.get()
+                for item in tree.get_children():
+                    tree.delete(item)
+
+                filtered_sales = [
+                    venta for venta in ventas
+                    if (str(venta[0]) == invoice_search or not invoice_search) and
+                    (venta[1].lower() == client_search.lower() or not client_search)
+                ]
+
+                for venta in filtered_sales:
+                    venta = list(venta)
+                    venta[3] = "{:,.0f}".format(venta[3])
+                    venta[5] = "{:,.0f}".format(venta[5])
+                    venta[6] = datetime.datetime.strptime(venta[6], "%Y-%m-%d").strftime("%d-%m-%Y")
+                    tree.insert("", "end", values=venta)
+
+            label_sales_made = tk.Label(window_sales, text="Ventas realizadas", font="sans 26 bold", bg="#95c799")
+            print("Label 'Ventas realizadas' creado correctamente.")
+            label_sales_made.place(x=350, y=20)
+
+            filter_frame = tk.Frame(window_sales, bg="#95c799")
+            filter_frame.place(x=20, y=60, width=1060, height=60)
+
+            label_invoice = tk.Label(filter_frame, text="Numero de factura", bg="#95c799", font="sans 14 bold")
+            label_invoice.place(x=10, y=15)
+
+            entry_invoice = ttk.Entry(filter_frame, font="sans 14 bold")
+            entry_invoice.place(x=200, y=10, width=200, height=40)
+            
+            label_client = tk.Label(filter_frame, text="Cliente", bg="#95c799", font="sans 14 bold")
+            label_client.place(x=420, y=15)
+
+            entry_client = ttk.Entry(filter_frame, font="sans 14 bold")
+            entry_client.place(x=620, y=10, width=200, height=40)
+
+            btn_filter = tk.Button(filter_frame, text="Filtar", font="sans 14 bold", command=filter_sales)
+            btn_filter.place(x=840, y=10)
+
+            tree_frame = tk.Frame(window_sales, bg="white")
+            tree_frame.place(x=20, y=130, width=1060, height=500)
+
+            scrol_y = ttk.Scrollbar(tree_frame)
+            scrol_y.pack(side=RIGHT, fill=Y)
+
+            scrol_x = ttk.Scrollbar(tree_frame, orient=HORIZONTAL)
+            scrol_x.pack(side=BOTTOM, fill=X)
+
+            tree = ttk.Treeview(tree_frame, columns=("Factura", "Cliente", "Producto", "Precio", "Cantidad", "Total", "Fecha", "Hora"), show="headings")
+            tree.pack(expand=True, fill=BOTH)
+
+            scrol_y.config(command=tree.yview)
+            scrol_x.config(command=tree.xview)
+
+            tree.heading("Factura", text="Factura")
+            tree.heading("Cliente", text="Cliente")
+            tree.heading("Producto", text="Producto")
+            tree.heading("Precio", text="Precio")
+            tree.heading("Cantidad", text="Cantidad")
+            tree.heading("Total", text="Total")
+            tree.heading("Fecha", text="Fecha")
+            tree.heading("Hora", text="Hora")
+
+            tree.column("Factura", width=60, anchor="center")
+            tree.column("Cliente", width=120, anchor="center")
+            tree.column("Producto", width=120, anchor="center")
+            tree.column("Precio", width=80, anchor="center")
+            tree.column("Cantidad", width=80, anchor="center")
+            tree.column("Total", width=80, anchor="center")
+            tree.column("Fecha", width=80, anchor="center")
+            tree.column("Hora", width=80, anchor="center")
+
+            print("#2 Datos recuperados de la base de datos:", ventas)  # Verificar los datos antes del bucle
+            if not ventas:
+                print("La lista 'ventas' está vacía.")
+            for venta in ventas:
+                venta = list(venta)
+                venta[3] = "{:,.0f}".format(venta[3])
+                venta[5] = "{:,.0f}".format(venta[5])
+                venta[6] = datetime.datetime.strptime(venta[6], "%Y-%m-%d").strftime("%d-%m-%Y")
+                print("Datos a insertar:", venta)
+                tree.insert("", "end", values=venta)      
+
+        except sqlite3.Error as e:
+            messagebox.showerror("Error", "Error al obtener las ventas:", e)
+    
     def widgets(self):
         labelframe = tk.LabelFrame(self, font="sans 12 bold", bg="#95c799")
         labelframe.place(x=25, y=30, width=1045, height=180)
@@ -356,5 +464,5 @@ class Ventas(tk.Frame):
         pay_button = tk.Button(self, text="Pagar", font="sans 14 bold", command=self.Make_payment)
         pay_button.place(x=70, y=550, width=180, height=40)
 
-        see_sale_button = tk.Button(self, text="Ver ventas realizadas", font="sans 14 bold")
+        see_sale_button = tk.Button(self, text="Ver ventas realizadas", font="sans 14 bold", command=self.see_sales_made)
         see_sale_button.place(x=290, y=550, width=280, height=40)
