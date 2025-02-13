@@ -4,6 +4,12 @@ import tkinter as tk
 from tkinter import ttk, messagebox, simpledialog
 import datetime
 import threading
+from reportlab.lib.pagesizes import letter
+from reportlab.lib import colors
+from reportlab.lib.units import inch
+from reportlab.pdfgen import canvas
+import sys
+import os
 
 class Ventas(tk.Frame):
     db_name = 'database.db'
@@ -189,7 +195,8 @@ class Ventas(tk.Frame):
                 c.execute("UPDATE articulos SET stock = stock - ? WHERE article =?", (quantity, product))
 
             conn.commit()
-            conn.close()
+            
+            self.generate_pdf_invoice(total_sale, client)
 
         except sqlite3.Error as e:
             messagebox.showerror("Error", f"Error al registrar la venta: {e}")
@@ -385,7 +392,93 @@ class Ventas(tk.Frame):
                 tree.insert("", "end", values=venta)      
 
         except sqlite3.Error as e:
-            messagebox.showerror("Error", "Error al obtener las ventas:", e)
+            messagebox.showerror("Error", "Error al obtener las ventas: {e}")
+    
+    def generate_pdf_invoice(self, total_sale, client):
+        try:
+            invoice_path = f"invoices/Factura_{self.number_invoice}.pdf"
+            c = canvas.Canvas(invoice_path, pagesize=letter)
+
+            company_name = "Mini Market"
+            company_address = "Porton de la vega"
+            company_phone = "+57 1234567890"
+            company_email = "minimarket@gmail.com"
+            company_website = "www.marketplace.com"
+
+            c.setFont("Helvetica-Bold", 18)
+            c.setFillColor(colors.darkgreen)
+            c.drawCentredString(300, 750, "Factura de Servicios")
+
+            c.setFillColor(colors.black)
+            c.setFont("Helvetica-Bold", 12)
+            c.drawString(50, 710, f"{company_name}")
+            c.setFont("Helvetica", 12)
+            c.drawString(50, 690, f"Dirección: {company_address}")
+            c.drawString(50, 670, f"Teléfono: {company_phone}")
+            c.drawString(50, 650, f"Email: {company_email}")
+            c.drawString(50, 630, f"Website: {company_website}")
+
+            c.setLineWidth(0.5)
+            c.setStrokeColor(colors.gray)
+            c.line(50, 620, 550, 620)
+
+            c.setFont("Helvetica", 12)
+            c.drawString(50, 600, f"Número de factura {self.number_invoice}")
+            c.drawString(50, 580, f"Fecha {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+
+            c.line(50, 560, 550, 560)
+
+            c.drawString(50, 540, f"Cliente: {client}")
+            c.drawString(50, 520, "Descripción de productos:")
+
+            y_offset = 500
+            c.setFont("Helvetica-Bold", 12)
+            c.drawString(70, y_offset, "Producto")
+            c.drawString(270, y_offset, "Cantidad")
+            c.drawString(370, y_offset, "Precio")
+            c.drawString(470, y_offset, "Total")
+
+            c.line(50, y_offset - 10, 550, y_offset - 10)
+            y_offset -= 30
+            c.setFont("Helvetica-Bold", 12)      
+            for item in self.selected_products:
+                factura, client, product, price, quantity, total, cost = item
+                c.drawString(70, y_offset, product)
+                c.drawString(270, y_offset, str(quantity))
+                c.drawString(370, y_offset, "${:,.0f}".format(price))
+                c.drawString(470, y_offset, total)
+                y_offset -= 20
+
+            c.line(50, y_offset, 550, y_offset)
+            y_offset -= 20
+
+            c.setFont("Helvetica-Bold", 14)
+            c.setFillColor(colors.darkgreen)
+            c.drawString(50, y_offset, f"Total a pagar: $ {total_sale:,.0f}")
+            c.setFillColor(colors.black)
+            c.setFont("Helvetica", 12)
+
+            y_offset -= 20
+            c.line(50, y_offset, 550, y_offset)
+
+            c.setFont("Helvetica-Bold", 16)
+            c.drawString(150, y_offset - 60, "Gracias por su compra")
+            
+            y_offset -= 100
+            c.setFont("Helvetica-Bold", 10)
+            c.drawString(50, y_offset, "Términos y Condiciones:")
+            c.drawString(50, y_offset - 20, "1. Los productos comprados no tienen devolución")
+            c.drawString(50, y_offset - 40, "2. Conserve esta factura como comprobante de su compra")
+            c.drawString(50, y_offset - 60, "3. Para más información, visite nuestro sitio web o contacte a servicio al cliente")
+
+            c.save()
+
+            messagebox.showinfo("Factura generada", f"Se ha generado la factura en: {invoice_path}")
+
+            os.startfile(os.path.abspath(invoice_path))
+
+        except sqlite3.Error as e:
+            messagebox.showerror("Error", f"No se pudo generar la factura: {e}")
     
     def widgets(self):
         labelframe = tk.LabelFrame(self, font="sans 12 bold", bg="#95c799")
