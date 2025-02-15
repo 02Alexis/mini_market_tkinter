@@ -20,7 +20,9 @@ class Ventas(tk.Frame):
         self.selected_products = []
         self.widgets()
         self.load_products()
+        self.load_clients()
         self.timer_product = None
+        self.timer_client = None
 
     def get_numer_current_invoice(self):
         try:
@@ -45,6 +47,18 @@ class Ventas(tk.Frame):
         except sqlite3.Error as e:
             print("Error cargando productos:", e)
 
+    def load_clients(self):
+        try:
+            conn = sqlite3.connect(self.db_name)
+            c = conn.cursor()
+            c.execute("SELECT name FROM clientes")
+            clients = c.fetchall()
+            self.clients = [client[0] for client in clients]
+            self.entry_client["values"] = self.clients
+            conn.close()
+        except sqlite3.Error as e:
+            print("Error cargando clientes:", e)
+
     def filter_products(self, event):
         if self.timer_product:
             self.timer_product.cancel()
@@ -66,6 +80,28 @@ class Ventas(tk.Frame):
             self.entry_product['values'] = ["No se encontraron resultados"]
             self.entry_product.event_generate('<Down>')
             self.entry_product.delete(0, tk.END)
+            
+    def filter_clientes(self, event):
+        if self.timer_client:
+            self.timer_client.cancel()
+        self.timer_client = threading.Timer(0.5, self.filter_clients_)
+        self.timer_client.start()
+
+    def filter_clients_(self):
+        typed = self.entry_client.get()
+
+        if typed == '':
+            data = self.clients
+        else:
+            data = [item for item in self.clients if typed.lower() in item.lower()]
+
+        if data:
+            self.entry_client['values'] = data
+            self.entry_client.event_generate('<Down>')
+        else:
+            self.entry_client['values'] = ["No se encontraron resultados"]
+            self.entry_client.event_generate('<Down>')
+            self.entry_client.delete(0, tk.END)
             
     def add_article(self):
         client = self.entry_client.get()
@@ -488,6 +524,7 @@ class Ventas(tk.Frame):
         label_client.place(x=10, y=11)
         self.entry_client = ttk.Combobox(labelframe, font="sans 14 bold")
         self.entry_client.place(x=120, y=8, width=260, height=40)
+        self.entry_client.bind('<KeyRelease>', self.filter_clientes)
 
         label_product = tk.Label(labelframe, text="Producto: ", font="sans 14 bold", bg="#95c799")
         label_product.place(x=10, y=70)
